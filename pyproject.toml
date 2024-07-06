@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=67.6.1", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "redimacs"
+version = "0.0.1"
+authors = [{ name = "Frédéric Dux", email = "duxfrederic@gmail.com" }]
+description = "Reducing IMACS long slit spectra just for our very specific configuration"
+readme = "README.md"
+keywords = ["pipeline", "spectroscopy"]
+classifiers = []
+dependencies = [
+    "pyyaml",
+    "matplotlib",
+    "astropy",
+    "sep",
+    "scipy",
+    "pandas",
+    "h5py",
+    "astroscrappy",
+    "pytest",
+    "matplotlib",
+    "ccdproc",
+]
+
+[project.scripts]
+imacs_red_specs = "redimacs.script:main"
+
+[project.urls]
+repository = "https://github.com/duxfrederic/redimacs"
+
+[project.optional-dependencies]
+test = [
+    "pytest"
+]
+
+[tool.setuptools]
+packages.find = {where = ["."], include = ["redimacs*", "scripts*"]}
+package-dir = {"" = "."}
