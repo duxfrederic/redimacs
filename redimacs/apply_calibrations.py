@@ -17,13 +17,17 @@ def load_ccd(directory, id_number, ccd_number):
     crop2 = 100
     target_file = directory / f'iff{id_number:0>04}c{ccd_number}.fits'
     binning = fits.getheader(target_file).get('BINNING', '1x1')
+    slit = fits.getheader(target_file).get('SLITMASK').lower()
 
     a = fits.getdata(target_file)
     a = a[crop:4096-crop2, :2048]
     b = fits.getdata(directory / f'stacked_bias_c{ccd_number}_{binning}.fits')
     b = b[crop:4096-crop2, :2048]
 
-    return a - b
+    f = fits.getdata(directory / f'stacked_flat_c{ccd_number}_{binning}_{slit}.fits')
+    f = f[crop:4096-crop2, :2048]
+
+    return (a - b) / f
 
 
 def load_spectrum_and_apply_calibrations(directory, id_number):

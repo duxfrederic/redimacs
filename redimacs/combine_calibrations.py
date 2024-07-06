@@ -68,11 +68,14 @@ def stack_flat(directory, ccd_id, binning, slit_mask, files, exposure_times, red
         ccd = CCDData.read(directory / file, unit="adu")
         large_value = np.nanpercentile(ccd.data, 95)
         if not (5000 < large_value < 40000):
-            print('rejecting', file, f'(count value is {large_value:.0f}')
-        ccd.divide(operand=exptime)
+            print('rejecting', file, f'(count value is {large_value:.0f})')
+        ccd = ccd.divide(operand=exptime)
         ccd_list.append(ccd)
 
     stacked_flat = ccdproc.combine(ccd_list, method='median')
-    stacked_flat.divide(np.nanpercentile(stacked_flat.data, 50))
+    flat_flat = stacked_flat.data.flatten()
+    nonzero_flat = flat_flat[np.where(flat_flat > 0.)]
+    norm = np.nanpercentile(nonzero_flat, 50)
+    stacked_flat = stacked_flat.divide(norm)
     stacked_flat.write(combined_flat_file, overwrite=True)
 
