@@ -3,7 +3,8 @@ from astropy.io import fits
 import pandas as pd
 import argparse
 
-from .combine_calibrations import make_main_bias_from_directory
+from .combine_calibrations import (make_main_bias_from_directory,
+                                   make_main_flat_from_directory)
 from .apply_calibrations import load_spectrum_and_apply_calibrations
 from .binning import bin_spectrum
 from .sky_modelling import subtract_median
@@ -27,6 +28,7 @@ def main():
     make_main_bias_from_directory(directory)
 
     # flats
+    make_main_flat_from_directory(directory)
 
     # Load, subtract sky, bin and save spectrum
     spectrum = load_spectrum_and_apply_calibrations(directory, dataset_number)

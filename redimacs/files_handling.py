@@ -30,8 +30,10 @@ def get_list_of_files_in_directory(directory: Path):
                 'object': object_name,
                 'ccd_id': ccd_id,
                 'binning': binning,
-                'type': header.get('EXPTYPE'),
-                'subraster': header.get('SUBRASTR')
+                'type': header.get('EXPTYPE').lower(),
+                'subraster': header.get('SUBRASTR'),
+                'exptime': header.get('EXPTIME'),
+                'slit_mask': header.get('SLITMASK', '').lower()
             })
 
     df = pd.DataFrame(data)
