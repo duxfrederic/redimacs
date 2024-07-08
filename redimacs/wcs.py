@@ -33,8 +33,9 @@ def generate_wcs(image_shape, lambda_start=4000, lambda_end=8500):
     return w
 
 
-def save_fits_with_wcs(filename, data, wcs):
-    hdu = fits.PrimaryHDU(data, header=wcs.to_header())
+def save_fits_with_wcs(filename, data, wcs, header):
+    header.update(wcs.to_header())
+    hdu = fits.PrimaryHDU(data, header)
     hdu.writeto(filename, overwrite=True)
 
 
