@@ -7,14 +7,15 @@ import argparse
 
 from .combine_calibrations import (make_main_bias_from_directory,
                                    make_main_flat_from_directory)
-from .apply_calibrations import load_spectrum_and_apply_calibrations
+from .apply_calibrations import (load_spectrum_and_apply_calibrations,
+                                 load_image_and_apply_calibrations)
 from .binning import bin_spectrum
 from .sky_modelling import subtract_median
 from .plots import show_image
 from .wcs import generate_simple_wavelength_solution, save_fits_with_wcs
 
 
-def main():
+def reduce_spectrum():
     parser = argparse.ArgumentParser(description='Reduce IMACS long slit spectroscopy data.')
     parser.add_argument('raw_path', type=str, help='Path to the directory containing raw FITS files.')
     parser.add_argument('dataset_number', type=int, help='Dataset number to process.')
@@ -27,7 +28,7 @@ def main():
     parser.add_argument('--no_sky_subtraction', dest='sky_subtraction', action='store_false',
                         help='Disable sky subtraction (default: enabled)')
 
-    parser.set_defaults(sky_subtraction=True, flat_correction=True, bias_correction=True)
+    parser.set_defaults(sky_subtraction=True)
 
     args = parser.parse_args()
     directory = Path(args.raw_path)
@@ -39,7 +40,7 @@ def main():
     make_main_bias_from_directory(directory)
 
     # flats
-    make_main_flat_from_directory(directory)
+    make_main_flat_from_directory(directory, flat_type='spec')
 
     # Load, subtract sky, bin and save spectrum
     spectrum, headers = load_spectrum_and_apply_calibrations(directory, dataset_number)
@@ -73,6 +74,44 @@ def main():
     show_image(spectrum, directory / f'{name}_reduced_spectrum_{dataset_number:0>04}.jpg')
 
 
-if __name__ == "__main__":
-    main()
+def reduce_image():
+    parser = argparse.ArgumentParser(description='Reduce IMACS imaging data.')
+    parser.add_argument('raw_path', type=str, help='Path to the directory containing raw FITS files.')
+    parser.add_argument('dataset_number', type=int, help='Dataset number to process.')
+    parser.add_argument('--save_name', type=str, help='Save name', default='')
 
+    args = parser.parse_args()
+    directory = Path(args.raw_path)
+    dataset_number = int(args.dataset_number)
+    print(f'Reducing exposures {dataset_number} in directory {directory}')
+
+    # process calibrations
+    # bias
+    make_main_bias_from_directory(directory)
+
+    # flats
+    make_main_flat_from_directory(directory, flat_type='imag')
+
+    # Load, subtract sky, bin and save spectrum
+    ccds, headers = load_image_and_apply_calibrations(directory, dataset_number)
+
+    # save name
+    if not args.save_name:
+        # create a name using the coordinates
+        try:
+            ra = ''.join(headers[0]['ra'].strip().split(':')[:2])
+            dec = ''.join(headers[0]['dec'].strip().split(':')[:2])
+            name = f'J{ra}{dec}'
+        except Exception as e:
+            print(f'Naming of final file, error: {e}H. Saving as UNKNOWN')
+            name = 'UNKNOWN'
+    else:
+        name = args.save_name
+
+    # Save the images
+    for key in ccds.keys():
+        array = ccds[key]
+        header = headers[key]
+        hdu = fits.PrimaryHDU(array, header)
+        save_name = directory / f"{name}_c{key}_iff{args.dataset_number:0>4}.fits"
+        hdu.writeto(save_name, overwrite=True)

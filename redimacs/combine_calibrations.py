@@ -39,11 +39,23 @@ def make_main_bias_from_directory(directory: Path):
             stack_bias(directory, ccd_id, binning, biases)
 
 
-def make_main_flat_from_directory(directory: Path):
+def make_main_flat_from_directory(directory: Path, flat_type: str):
+    """
+
+    Args:
+        directory: Path to directory containing raw data
+        flat_type: 'spec' or 'imag', whether we do flats of spectroscopic (long slit) or imaging frames
+
+    Returns:
+
+    """
     df = get_list_of_files_in_directory(directory)
     # Filter for flat frames
     flat_frames = df[df['type'] == 'flat']
-    flat_frames = flat_frames[flat_frames['slit_mask'].str.contains('ls')]
+    if flat_type == 'spec':
+        flat_frames = flat_frames[flat_frames['slit_mask'].str.contains('ls')]
+    else:
+        flat_frames = flat_frames[flat_frames['slit_mask'].str.contains('imaging')]
 
     # Group by CCD ID and slit mask and binning
     grouped = flat_frames.groupby(['ccd_id', 'binning', 'slit_mask'])
@@ -53,12 +65,21 @@ def make_main_flat_from_directory(directory: Path):
         flats = group['filename'].tolist()
         exposure_times = group['exptime'].tolist()
         if len(flats) > 0:
-            print(f'Combining {len(flats)} for ccd {ccd_id}, slit {slit} and binning {binning}')
-            stack_flat(directory, ccd_id, binning, slit, flats, exposure_times)
+            if flat_type == 'spec':
+                print(f'Combining {len(flats)} for ccd {ccd_id}, slit {slit} and binning {binning}')
+                stack_flat(directory, ccd_id, binning, flats, exposure_times, slit)
+            else:
+                print(f'Combining {len(flats)} for ccd {ccd_id} and binning {binning}')
+                stack_flat(directory, ccd_id, binning, flats, exposure_times)
 
 
-def stack_flat(directory, ccd_id, binning, slit_mask, files, exposure_times, redo=False):
-    combined_flat_file = directory / f'stacked_flat_{ccd_id}_{binning}_{slit_mask}.fits'
+def stack_flat(directory, ccd_id, binning, files, exposure_times, slit_mask=None, redo=False):
+    if slit_mask:
+        combined_flat_file = directory / f'stacked_flat_{ccd_id}_{binning}_{slit_mask}.fits'
+    else:
+        # probably a sky flat.
+        combined_flat_file = directory / f'stacked_flat_{ccd_id}_{binning}.fits'
+
     if combined_flat_file.exists() and not redo:
         return
     ccd_list = []

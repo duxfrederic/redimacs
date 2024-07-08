@@ -25,7 +25,8 @@ dependencies = [
 ]
 
 [project.scripts]
-imacs_red_specs = "redimacs.script:main"
+imacs_red_specs = "redimacs.script:reduce_spectrum"
+imacs_red_imag = "redimacs.script:reduce_image"
 
 [project.urls]
 repository = "https://github.com/duxfrederic/redimacs"
