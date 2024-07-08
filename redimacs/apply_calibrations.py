@@ -41,7 +41,8 @@ def load_spectrum_and_apply_calibrations(directory, id_number):
         array, binning_x, original_header = load_ccd(directory, id_number, ccd_number)
         array = array[:, ::-1]
         ccds.append(array)
-        gap_pixels = 57 // binning_x
+        gap_pixels = 167 // binning_x
+        print(f'Inserting gap: {gap_pixels}')
         gap_array = np.zeros((array.shape[0], gap_pixels))
         ccds.append(gap_array)  # Add the gap array between CCDs
         headers.append(original_header)

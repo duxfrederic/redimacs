@@ -2,9 +2,12 @@ from astropy.wcs import WCS
 from astropy.io import fits
 
 
-def generate_wcs(image_shape, lambda_start=4000, lambda_end=8500):
+def generate_simple_wavelength_solution(image_shape, lambda_start, lambda_end):
     """
     Generate a WCS object for a 2D image with spatial (y) and spectral (x) axes.
+    This is very simple, and inaccurate, but gives a +- 50 A position over the spectral range.
+    You will have to fit a more complex wavelength solution first, and read the lambda_start and end from your own
+    solution.
 
     Parameters:
     - image_shape: tuple
