@@ -21,8 +21,8 @@ def load_ccd(directory, id_number, ccd_number):
     original_header = fits.getheader(target_file)
     slit = original_header.get('SLITMASK').lower()
 
-    crop = 3600 // by
-    crop2 = 100 // bx
+    crop = 3700 // by
+    crop2 = 200 // bx
     a = fits.getdata(target_file)
     a = a[crop:4096//by-crop2, :2048 // bx]
     b = fits.getdata(directory / f'stacked_bias_c{ccd_number}_{binning}.fits')
