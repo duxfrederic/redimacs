@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "redimacs"
-version = "0.0.1"
+version = "0.0.2"
 authors = [{ name = "Frédéric Dux", email = "duxfrederic@gmail.com" }]
 description = "Reducing IMACS long slit spectra just for our very specific configuration"
 readme = "README.md"
@@ -22,6 +22,7 @@ dependencies = [
     "pytest",
     "matplotlib",
     "ccdproc",
+    "widefield_plate_solver",
 ]
 
 [project.scripts]
