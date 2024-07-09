@@ -2,7 +2,7 @@ from astropy.io import fits
 import numpy as np
 
 
-def load_ccd(directory, id_number, ccd_number, crop_bottom=0, crop_top=0):
+def load_ccd(directory, id_number, ccd_number, crop_bottom=0, crop_top=0, mode='spec'):
     """
 
     Args:
@@ -11,6 +11,7 @@ def load_ccd(directory, id_number, ccd_number, crop_bottom=0, crop_top=0):
         ccd_number:
         crop_bottom: for spectra, object usually is in the middle, so we crop
         crop_top: same as above
+        mode: spectra or imaging? 'spec' or 'imag'
 
     Returns:
         pre-red single CCD
@@ -21,12 +22,15 @@ def load_ccd(directory, id_number, ccd_number, crop_bottom=0, crop_top=0):
     bx, by = binning.split('x')
     bx, by = int(bx), int(by)
     original_header = fits.getheader(target_file)
-    slit = original_header.get('SLITMASK').lower()
-
 
     a = fits.getdata(target_file)
     b = fits.getdata(directory / f'stacked_bias_c{ccd_number}_{binning}.fits')
-    f = fits.getdata(directory / f'stacked_flat_c{ccd_number}_{binning}_{slit}.fits')
+    if mode == 'spec':
+        slit = original_header.get('SLITMASK').lower()
+        f = fits.getdata(directory / f'stacked_flat_c{ccd_number}_{binning}_{slit}.fits')
+    else:
+        photom_filter = original_header.get('FILTER').lower()
+        f = fits.getdata(directory / f'stacked_flat_c{ccd_number}_{binning}_{photom_filter}.fits')
 
     if crop_bottom > 0 and crop_top > 0:
         crop = crop_bottom // by
@@ -34,6 +38,10 @@ def load_ccd(directory, id_number, ccd_number, crop_bottom=0, crop_top=0):
         a = a[crop:4096//by-crop2, :2048 // bx]
         b = b[crop:4096//by-crop2, :2048 // bx]
         f = f[crop:4096//by-crop2, :2048 // bx]
+    else:
+        a = a[:4096, :2048]
+        b = b[:4096, :2048]
+        f = f[:4096, :2048]
 
     return (a - b) / f, (bx, by), original_header
 
@@ -42,7 +50,9 @@ def load_spectrum_and_apply_calibrations(directory, id_number):
     ccds = []
     headers = []
     for ccd_number in [6, 5, 8, 7]:
-        array, binning, original_header = load_ccd(directory, id_number, ccd_number, crop_bottom=3700, crop_top=200)
+        array, binning, original_header = load_ccd(directory, id_number, ccd_number,
+                                                   crop_bottom=3700, crop_top=200,
+                                                   mode='spec')
         array = array[:, ::-1]
         ccds.append(array)
         gap_pixels = 167 // binning[0]
@@ -64,8 +74,7 @@ def load_image_and_apply_calibrations(directory, id_number):
     ccds = {}
     headers = {}
     for ccd_number in [1, 2, 3, 4, 6, 5, 8, 7]:
-        array, binning, original_header = load_ccd(directory, id_number, ccd_number, crop_bottom=3700, crop_top=200)
-        array = array[:, ::-1]
+        array, binning, original_header = load_ccd(directory, id_number, ccd_number, mode='imag')
         ccds[ccd_number] = array
         headers[ccd_number] = original_header
 

@@ -1,7 +1,5 @@
 from pathlib import Path
 from astropy.io import fits
-from astropy.coordinates import SkyCoord
-from astropy import units as u
 import argparse
 
 
@@ -79,7 +77,12 @@ def reduce_image():
     parser.add_argument('raw_path', type=str, help='Path to the directory containing raw FITS files.')
     parser.add_argument('dataset_number', type=int, help='Dataset number to process.')
     parser.add_argument('--save_name', type=str, help='Save name', default='')
-
+    parser.add_argument('--no_plate_solving', dest='plate_solving', action='store_false',
+                        help='Disable plate solving (default: enabled)')
+    parser.add_argument('--redo', dest='redo', action='store_false',
+                        help='redo even if final file already exists? (default: do not redo)')
+    parser.add_argument('--ccd_number', dest='ccd_number', type=int, default=None,
+                        help='process only the given CCD number (1-8). Default: do all when not specified.')
     args = parser.parse_args()
     directory = Path(args.raw_path)
     dataset_number = int(args.dataset_number)
@@ -99,8 +102,12 @@ def reduce_image():
     if not args.save_name:
         # create a name using the coordinates
         try:
-            ra = ''.join(headers[0]['ra'].strip().split(':')[:2])
-            dec = ''.join(headers[0]['dec'].strip().split(':')[:2])
+            if type(headers) is dict:
+                index = list(headers.keys())[0]
+            else:
+                index = 0
+            ra = ''.join(headers[index]['ra'].strip().split(':')[:2])
+            dec = ''.join(headers[index]['dec'].strip().split(':')[:2])
             name = f'J{ra}{dec}'
         except Exception as e:
             print(f'Naming of final file, error: {e}H. Saving as UNKNOWN')
@@ -110,8 +117,23 @@ def reduce_image():
 
     # Save the images
     for key in ccds.keys():
+        if args.ccd_number is not None and key != args.ccd_number:
+            continue
+        save_name = directory / f"{name}_c{key}_iff{args.dataset_number:0>4}.fits"
+        if save_name.exists() and not args.redo:
+            print(f'{save_name} already processed and no redo flag: skip.')
+            continue
         array = ccds[key]
         header = headers[key]
         hdu = fits.PrimaryHDU(array, header)
-        save_name = directory / f"{name}_c{key}_iff{args.dataset_number:0>4}.fits"
+
         hdu.writeto(save_name, overwrite=True)
+        if args.plate_solving:
+            from widefield_plate_solver import plate_solve
+            ra_approx = header['RA-D']
+            dec_approx = header['DEC-D']
+            binning = int(header['binning'].split('x')[0])
+            wcs = plate_solve(save_name, sources=None, use_api=True, ra_approx=ra_approx, dec_approx=dec_approx,
+                              scale_min=0.09, scale_max=0.12*binning, use_n_brightest_only=60)
+            save_fits_with_wcs(save_name, array, wcs, header)
+

@@ -37,7 +37,12 @@ def generate_simple_wavelength_solution(image_shape, lambda_start, lambda_end):
 
 
 def save_fits_with_wcs(filename, data, wcs, header):
-    header.update(wcs.to_header())
+    try:
+        wcs = wcs.to_header()
+    except AttributeError:
+        # then the wcs is already a header, most likely ...just continue
+        pass
+    header.update(wcs)
     hdu = fits.PrimaryHDU(data, header)
     hdu.writeto(filename, overwrite=True)
 

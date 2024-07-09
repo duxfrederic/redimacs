@@ -33,7 +33,8 @@ def get_list_of_files_in_directory(directory: Path):
                 'type': header.get('EXPTYPE').lower(),
                 'subraster': header.get('SUBRASTR'),
                 'exptime': header.get('EXPTIME'),
-                'slit_mask': header.get('SLITMASK', '').lower()
+                'slit_mask': header.get('SLITMASK', '').lower(),
+                'filter': header.get('FILTER', '').lower()
             })
 
     df = pd.DataFrame(data)
