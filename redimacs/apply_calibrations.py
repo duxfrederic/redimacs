@@ -20,7 +20,7 @@ def load_ccd(directory, id_number, ccd_number, crop_bottom=0, crop_top=0, mode='
     target_file = directory / f'iff{id_number:0>04}c{ccd_number}.fits'
     original_header = fits.getheader(target_file)
     binning = original_header.get('BINNING', '1x1')
-    read_mode = original_header.get('SPEED', '')
+    read_mode = original_header.get('SPEED', '').lower()
     bx, by = binning.split('x')
     bx, by = int(bx), int(by)
 
