@@ -8,7 +8,7 @@ from .files_handling import get_list_of_files_in_directory
 
 
 def stack_bias(directory, ccd_id, binning, read_mode, files, redo=False):
-    combined_bias_file = directory / f'stacked_bias_{ccd_id}_{binning}.fits'
+    combined_bias_file = directory / f'stacked_bias_{ccd_id}_{binning}_{read_mode}.fits'
     if combined_bias_file.exists() and not redo:
         return
     print(f'Combining {len(files)} for ccd {ccd_id}, binning {binning} and read mode {read_mode}')
@@ -67,17 +67,19 @@ def make_main_flat_from_directory(directory: Path, flat_type: str):
         if len(flats) > 0:
             if flat_type == 'spec':
                 print(f'Combining {len(flats)} for ccd {ccd_id}, slit {mask} and binning {binning}')
-                stack_flat(directory, ccd_id, binning, flats, exposure_times, slit_mask=mask)
+                stack_flat(directory=directory, ccd_id=ccd_id, binning=binning,
+                           files=flats, exposure_times=exposure_times, slit_mask=mask, photom_filter=None)
             else:
                 print(f'Combining {len(flats)} for ccd {ccd_id}, filter {mask} and binning {binning}')
-                stack_flat(directory, ccd_id, binning, flats, exposure_times, photom_filter=mask)
+                stack_flat(directory=directory, ccd_id=ccd_id, binning=binning, files=flats,
+                           exposure_times=exposure_times, slit_mask=None, photom_filter=mask)
 
 
 def stack_flat(directory, ccd_id, binning, files, exposure_times, slit_mask=None, photom_filter=None, redo=False,
                method='median'):
     if slit_mask:
         combined_flat_file = directory / f'stacked_flat_{ccd_id}_{binning}_{slit_mask}.fits'
-    if photom_filter:
+    elif photom_filter:
         # probably a sky flat.
         combined_flat_file = directory / f'stacked_flat_{ccd_id}_{binning}_{photom_filter}.fits'
     else:
@@ -93,17 +95,21 @@ def stack_flat(directory, ccd_id, binning, files, exposure_times, slit_mask=None
         ccd = CCDData.read(directory / file, unit="adu")
         ccd.data = ccd.data.astype(float)
         # remove the bias from the ccd, read from each file specifically
-        read_mode = fits.getheader(directory / file).get('speed')
+        read_mode = fits.getheader(directory / file).get('speed').lower()
         b = fits.getdata(directory / f'stacked_bias_{ccd_id}_{binning}_{read_mode}.fits')
         ccd.data -= b
-        median_value = np.nanpercentile(ccd.data, 50)
-        print(f'{file} has 60th percentile value: {median_value:.01f}')
-        if not (5000 < median_value < 50000):
+        filtered_data = ccd.data[ccd.data > 0]
+        median_value = np.nanpercentile(filtered_data, 90)
+        print(f'{file} has 90th percentile value: {median_value:.01f}')
+        if not (3000 < median_value < 50000):
             print('rejecting', file, f'(count value is {median_value:.0f})')
             continue
         ccd = ccd.divide(operand=median_value)
         ccd_list.append(ccd)
         chosen_files.append(file)
+    if len(chosen_files) < 1:
+        print("Not enough flat exposures for this configuration / CCD")
+        return
     print(f"Combining files: {chosen_files}")
 
     stacked_flat = ccdproc.combine(ccd_list, method=method)
