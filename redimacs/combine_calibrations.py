@@ -2,16 +2,16 @@ import ccdproc
 from astropy.nddata import CCDData
 from astropy.io import fits
 from pathlib import Path
-import pandas as pd
 import numpy as np
 
 from .files_handling import get_list_of_files_in_directory
 
 
-def stack_bias(directory, ccd_id, binning, files, redo=False):
+def stack_bias(directory, ccd_id, binning, read_mode, files, redo=False):
     combined_bias_file = directory / f'stacked_bias_{ccd_id}_{binning}.fits'
     if combined_bias_file.exists() and not redo:
         return
+    print(f'Combining {len(files)} for ccd {ccd_id}, binning {binning} and read mode {read_mode}')
     ccd_list = []
     for file in files:
         if 'stacked' in file:
@@ -29,14 +29,13 @@ def make_main_bias_from_directory(directory: Path):
     bias_frames = df[df['type'] == 'bias']
 
     # Group by CCD ID and binning
-    grouped = bias_frames.groupby(['ccd_id', 'binning'])
+    grouped = bias_frames.groupby(['ccd_id', 'binning', 'read_mode'])
 
     # Produce stacked bias for each CCD and binning combination
-    for (ccd_id, binning), group in grouped:
+    for (ccd_id, binning, read_mode), group in grouped:
         biases = group['filename'].tolist()
         if len(biases) > 0:
-            print(f'Combining {len(biases)} for ccd {ccd_id} and binning {binning}')
-            stack_bias(directory, ccd_id, binning, biases)
+            stack_bias(directory, ccd_id, binning, read_mode, biases)
 
 
 def make_main_flat_from_directory(directory: Path, flat_type: str):
@@ -93,8 +92,9 @@ def stack_flat(directory, ccd_id, binning, files, exposure_times, slit_mask=None
             continue
         ccd = CCDData.read(directory / file, unit="adu")
         ccd.data = ccd.data.astype(float)
-        # remove the bias from the ccd
-        b = fits.getdata(directory / f'stacked_bias_{ccd_id}_{binning}.fits')
+        # remove the bias from the ccd, read from each file specifically
+        read_mode = fits.getheader(directory / file).get('speed')
+        b = fits.getdata(directory / f'stacked_bias_{ccd_id}_{binning}_{read_mode}.fits')
         ccd.data -= b
         median_value = np.nanpercentile(ccd.data, 50)
         print(f'{file} has 60th percentile value: {median_value:.01f}')

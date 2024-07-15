@@ -18,13 +18,14 @@ def load_ccd(directory, id_number, ccd_number, crop_bottom=0, crop_top=0, mode='
     """
 
     target_file = directory / f'iff{id_number:0>04}c{ccd_number}.fits'
-    binning = fits.getheader(target_file).get('BINNING', '1x1')
+    original_header = fits.getheader(target_file)
+    binning = original_header.get('BINNING', '1x1')
+    read_mode = original_header.get('SPEED', '')
     bx, by = binning.split('x')
     bx, by = int(bx), int(by)
-    original_header = fits.getheader(target_file)
 
     a = fits.getdata(target_file)
-    b = fits.getdata(directory / f'stacked_bias_c{ccd_number}_{binning}.fits')
+    b = fits.getdata(directory / f'stacked_bias_c{ccd_number}_{binning}_{read_mode}.fits')
     if mode == 'spec':
         slit = original_header.get('SLITMASK').lower()
         f = fits.getdata(directory / f'stacked_flat_c{ccd_number}_{binning}_{slit}.fits')
