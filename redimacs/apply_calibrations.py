@@ -1,5 +1,6 @@
 from astropy.io import fits
 import numpy as np
+from scipy.ndimage import rotate
 
 
 def load_ccd(directory, id_number, ccd_number, crop_bottom=0, crop_top=0, mode='spec'):
@@ -67,8 +68,12 @@ def load_spectrum_and_apply_calibrations(directory, id_number):
     # Concatenate all arrays along the short axis (axis 1)
     spectrum = np.concatenate(ccds, axis=1)
 
-    # aaand inverse, because red is on the left on imacs
-    return spectrum[:, ::-1], headers
+    # inverse, because red is on the left on imacs
+    spectrum = spectrum[:, ::-1]
+
+    # rotate: make skylines vertical
+    spectrum = rotate(spectrum, angle=8.5/180*3.14, reshape=False, mode='mirror')
+    return spectrum, headers
 
 
 def load_image_and_apply_calibrations(directory, id_number):

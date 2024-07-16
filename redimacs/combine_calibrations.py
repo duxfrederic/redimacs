@@ -19,7 +19,7 @@ def stack_bias(directory, ccd_id, binning, read_mode, files, redo=False):
         ccd = CCDData.read(directory / file, unit="adu")
         ccd_list.append(ccd)
 
-    stacked_bias = ccdproc.combine(ccd_list, method='average')
+    stacked_bias = ccdproc.combine(ccd_list, method='median')
     stacked_bias.write(combined_bias_file, overwrite=True)
 
 
@@ -101,7 +101,7 @@ def stack_flat(directory, ccd_id, binning, files, exposure_times, slit_mask=None
         filtered_data = ccd.data[ccd.data > 0]
         median_value = np.nanpercentile(filtered_data, 90)
         print(f'{file} has 90th percentile value: {median_value:.01f}')
-        if not (3000 < median_value < 50000):
+        if not (1000 < median_value < 50000):
             print('rejecting', file, f'(count value is {median_value:.0f})')
             continue
         ccd = ccd.divide(operand=median_value)
